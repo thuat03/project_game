@@ -9,7 +9,11 @@ using namespace std::chrono;
 
 const int SCREEN_WIDTH = 800;
 const int SCREEN_HEIGHT = 450;
+const int FAIL_MAX = 20;
+int REDUCE_X = 5;
 const int fps = 60;
+int score = 0;
+int fail = 0;
 enum Status
 {
 	RUN = 0,
@@ -25,6 +29,8 @@ SDL_Texture* bg = NULL;
 SDL_Texture* up_icon = NULL;
 SDL_Texture* down_icon = NULL;
 Mix_Music* music = NULL;
+Mix_Chunk* perfect = NULL;
+Mix_Chunk* good = NULL;
 SDL_Rect rectBG = { 0,0,SCREEN_WIDTH,SCREEN_HEIGHT };
 SDL_Rect rect_up_icon = { 184,201,32,33 };
 SDL_Rect rect_down_icon = { 184,331,32,33 };
@@ -289,6 +295,29 @@ public:
 		}
 	}
 };
+
+void printInfo()
+{
+	system("cls");
+	std::cout << "Score: " << score << std::endl << std::endl;
+	std::cout << "Speed: " << REDUCE_X << std::endl << std::endl;
+	std::cout << "Failed: " << fail << std::endl << std::endl;
+}
+
+void do_perfect()
+{
+	Mix_PlayChannel(-1, perfect, 0);
+	score += 2;
+	printInfo();
+}
+
+void do_good()
+{
+	Mix_PlayChannel(-1, good, 0);
+	score++;
+	printInfo();
+}
+
 class Ballon
 {
 public:
@@ -305,12 +334,14 @@ public:
 	}
 	void reduceX()
 	{
-		rect.x -= 5;
+		rect.x -= REDUCE_X;
 	}
 	void reset()
 	{
 		if (rect.x < 0)
 		{
+			fail++;
+			printInfo();
 			rect.x = 1500;
 			int i = rand() % 2;
 			if (i == 1)
@@ -368,12 +399,14 @@ public:
 	}
 	void reduceX()
 	{
-		rect.x -= 5;
+		rect.x -= REDUCE_X;
 	}
 	void reset()
 	{
 		if (rect.x < 0)
 		{
+			fail++;
+			printInfo();
 			rect.x = 1100;
 			int i = rand() % 2;
 			if (i == 1)
@@ -442,30 +475,63 @@ void close()
 }
 void check_crash_ballon_up(Ballon* ballon)
 {
-	if (abs(rect_up_icon.x - ballon->rect.x) < 40 && ballon->rect.y < 200)
+	if (abs(rect_up_icon.x - ballon->rect.x) < 60 && ballon->rect.y < 200)
 	{
+		if (abs(rect_up_icon.x - ballon->rect.x) < 30)
+		{
+			do_perfect();
+		}
+		else if (abs(rect_up_icon.x - ballon->rect.x) < 60)
+		{
+			Mix_PlayChannel(-1, good, 0);
+			score++;
+		}
 		ballon->resetBatBuoc();
 	}
 }
 void check_crash_ballon_down(Ballon* ballon)
 {
-	if (abs(rect_down_icon.x - ballon->rect.x) < 40 && ballon->rect.y > 290)
+	if (abs(rect_down_icon.x - ballon->rect.x) < 60 && ballon->rect.y > 290)
 	{
+		if (abs(rect_down_icon.x - ballon->rect.x) < 30)
+		{
+			do_perfect();
+		}
+		else if (abs(rect_down_icon.x - ballon->rect.x) < 60)
+		{
+			do_good();
+		}
 		ballon->resetBatBuoc();
 	}
 }
 void check_crash_rainbow_up(Rainbow* rainbow)
 {
-	if (abs(rect_up_icon.x - rainbow->rect.x) < 40 && rainbow->rect.y < 200)
+	if (abs(rect_up_icon.x - rainbow->rect.x) < 60 && rainbow->rect.y < 200)
 	{
+		if (abs(rect_up_icon.x - rainbow->rect.x) < 30)
+		{
+			do_perfect();
+		}
+		else if (abs(rect_up_icon.x - rainbow->rect.x) < 60)
+		{
+			do_good();
+		}
 		rainbow->resetBatBuoc();
 	}
 }
 
 void check_crash_rainbow_down(Rainbow* rainbow)
 {
-	if (abs(rect_down_icon.x - rainbow->rect.x) < 40 && rainbow->rect.y >290)
+	if (abs(rect_down_icon.x - rainbow->rect.x) < 60 && rainbow->rect.y >290)
 	{
+		if (abs(rect_down_icon.x - rainbow->rect.x) < 30)
+		{
+			do_perfect();
+		}
+		else if (abs(rect_down_icon.x - rainbow->rect.x) < 60)
+		{
+			do_good();
+		}
 		rainbow->resetBatBuoc();
 	}
 }
@@ -522,8 +588,13 @@ void play(Aya* aya, Rainbow* rainbow, Ballon* ballon)
 		rainbow->render();
 		aya->render();
 		SDL_RenderPresent(renderer);
+		REDUCE_X = 5 + score / 10;
+
 		auto finish = high_resolution_clock::now();
 		auto cal = duration_cast<milliseconds>(finish - start);
+
+		if (fail == FAIL_MAX)return;
+
 		if (cal.count() < 1000 / fps)
 		{
 			SDL_Delay(1000 / fps - cal.count());
@@ -542,6 +613,9 @@ int main(int argc, char* args[])
 	bg = loadTexture("data/image/image/background.png", renderer);
 	up_icon = loadTexture("data/image/icon/up.png", renderer);
 	down_icon = loadTexture("data/image/icon/down.png", renderer);
+	perfect = Mix_LoadWAV("data/music/sfx/perfect.wav");
+	good = Mix_LoadWAV("data/music/sfx/good.wav");
+	printInfo();
 	play(aya,rainbow,ballon);
 	close();
 	return 0;
