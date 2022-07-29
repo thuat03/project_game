@@ -483,8 +483,7 @@ void check_crash_ballon_up(Ballon* ballon)
 		}
 		else if (abs(rect_up_icon.x - ballon->rect.x) < 60)
 		{
-			Mix_PlayChannel(-1, good, 0);
-			score++;
+			do_good();
 		}
 		ballon->resetBatBuoc();
 	}
